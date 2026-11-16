@@ -56,7 +56,20 @@ function escapeXML(s){return s.replaceAll('&','&amp;').replaceAll('<','&lt;').re
 function renderQ(){chosen=false;$('qCount').textContent='Pergunta '+(qi+1)+' de '+questions.length;$('question').textContent=questions[qi][0];$('choices').innerHTML='';$('feedback').classList.add('hidden');$('nextQuestion').disabled=true;$('nextQuestion').textContent=qi===questions.length-1?'Ir para avaliação →':'Próxima pergunta →';questions[qi][1].forEach((o,i)=>{let b=document.createElement('button');b.className='choice';b.textContent=String.fromCharCode(65+i)+') '+o;b.onclick=()=>answer(i);$('choices').appendChild(b)})}
 function answer(i){if(chosen)return;chosen=true;let q=questions[qi];answers.push({question:q[0],answer:q[1][i],correct:i===q[2]});if(i===q[2])score++;Array.from($('choices').children).forEach((b,j)=>{b.disabled=true;if(j===q[2])b.classList.add('good');else if(j===i)b.classList.add('bad')});$('feedback').textContent=(i===q[2]?'Muito bem! ':'Vamos aprender: ')+q[3];$('feedback').classList.remove('hidden');$('nextQuestion').disabled=false}
 function nextQ(){if(qi<questions.length-1){qi++;renderQ()}else{show('evaluation');$('rating').innerHTML='';for(let i=0;i<=10;i++){let b=document.createElement('button');b.textContent=i;b.onclick=()=>{grade=i;Array.from($('rating').children).forEach((x,j)=>x.classList.toggle('selected',j===i))};$('rating').appendChild(b)}}}
-function finish(){if(grade===null||!$('easy').value||!$('new').value||!$('apply').value){alert('Informe uma nota e responda às três perguntas obrigatórias.');return}report={codigo:'CV-'+Date.now().toString(36).toUpperCase().slice(-7),data:new Date().toLocaleString('pt-BR'),acertos:score,nota:grade,facilidade:$('easy').value,aprendizado:$('new').value,intencao:$('apply').value,comentario:$('comment').value,respostas:answers};saveLocalReport(report);$('result').textContent='Você acertou '+score+' de 5 perguntas e deu nota '+grade+'/10 para a atividade.';show('done')}
+
+function enviarParaPlanilha(dados) {
+  return fetch(URL_PLANILHA, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(dados)
+  });
+}
+
+function finish(){if(grade===null||!$('easy').value||!$('new').value||!$('apply').value){alert('Informe uma nota e responda às três perguntas obrigatórias.');return}report={codigo:'CV-'+Date.now().toString(36).toUpperCase().slice(-7),data:new Date().toLocaleString('pt-BR'),acertos:score,nota:grade,facilidade:$('easy').value,aprendizado:$('new').value,intencao:$('apply').value,comentario:$('comment').value,respostas:answers};saveLocalReport(report);enviarParaPlanilha(report).catch(console.error);enviarParaPlanilha(report).catch(console.error);
+enviarParaPlanilha(report).catch(console.error);$('result').textContent='Você acertou '+score+' de 5 perguntas e deu nota '+grade+'/10 para a atividade.';show('done')}
 function exportCSV(){if(!report)return;let headers=['Data','Acertos','Nota','Facilidade','Aprendizado','Intenção','Comentário',...report.respostas.map((x,i)=>'Resposta '+(i+1))];let values=[report.data,report.acertos,report.nota,report.facilidade,report.aprendizado,report.intencao,report.comentario,...report.respostas.map(x=>x.answer)];const esc=x=>'"'+String(x??'').replaceAll('"','""')+'"';let csv='\uFEFF'+headers.map(esc).join(';')+'\n'+values.map(esc).join(';');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='CardioVida_respostas.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500)}
 
 const DBKEY='cardiovida-avaliacoes-local-v1';
